@@ -1,0 +1,4 @@
+#python -m src.preprocessing.extract_frames --datasets ffpp
+#python -m src.preprocessing.extract_frames --datasets celebdf
+#python -m src.preprocessing.face_align_mtcnn
+#python -m src.training.train_frame 

@@ -1,0 +1,30 @@
+# Dataset
+datasets/
+data/
+frames/
+videos/
+tfrecords/
+
+# Outputs
+outputs/
+results/
+logs/
+
+# Checkpoints
+checkpoints/
+weights/
+*.pth
+*.pt
+*.ckpt
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

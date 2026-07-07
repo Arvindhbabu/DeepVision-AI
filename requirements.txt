@@ -1,0 +1,12 @@
+ numpy
+opencv-python
+tqdm
+facenet-pytorch>=2.0.0
+torch>=1.12.0
+tensorflow>=2.9.0         # optional if you want TFRecords / TF training
+scikit-image
+scikit-learn
+pillow
+matplotlib
+pandas
+pyyaml
