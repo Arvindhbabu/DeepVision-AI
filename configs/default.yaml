@@ -1,0 +1,42 @@
+project:
+  name: DeepVision AI
+  version: 2.0
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  sequences: data/intermediate/sequences
+  checkpoints: outputs/checkpoints
+  logs: outputs/logs
+  metrics: outputs/metrics
+  predictions: outputs/predictions
+
+dataset:
+  name: FFPP_CelebDF
+  image_size: 224
+  sequence_length: 30
+  fps: 5
+  batch_size: 8
+  num_workers: 4
+
+training:
+  epochs: 30
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  optimizer: AdamW
+  scheduler: CosineAnnealingLR
+
+model:
+  backbone: vit_b_16
+  pretrained: true
+  freeze_backbone: true
+  temporal_pooling: mean
+  num_classes: 2
+
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - auc
