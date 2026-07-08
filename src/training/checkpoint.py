@@ -15,7 +15,8 @@ import yaml
 
 class CheckpointManager:
     """
-    Handles experiment tracking and checkpoint saving.
+    Handles experiment tracking, checkpoint saving,
+    experiment reproducibility and resume training.
     """
 
     def __init__(self, root_dir="outputs/runs"):
@@ -30,37 +31,152 @@ class CheckpointManager:
     def path(self):
         return self.run_dir
 
-    def save_best_model(self, model):
+    # --------------------------------------------------
+    # Save Best Model
+    # --------------------------------------------------
+
+    def save_best_model(
+        self,
+        model,
+        optimizer=None,
+        scheduler=None,
+        epoch=None,
+        best_loss=None,
+    ):
+
+        checkpoint = {
+            "epoch": epoch,
+            "best_loss": best_loss,
+            "model_state_dict": model.state_dict(),
+        }
+
+        if optimizer is not None:
+            checkpoint["optimizer_state_dict"] = optimizer.state_dict()
+
+        if scheduler is not None:
+            checkpoint["scheduler_state_dict"] = scheduler.state_dict()
 
         torch.save(
-            model.state_dict(),
+            checkpoint,
             self.run_dir / "best_model.pth",
         )
 
-    def save_last_model(self, model):
+    # --------------------------------------------------
+    # Save Last Model
+    # --------------------------------------------------
+
+    def save_last_model(
+        self,
+        model,
+        optimizer=None,
+        scheduler=None,
+        epoch=None,
+        best_loss=None,
+    ):
+
+        checkpoint = {
+            "epoch": epoch,
+            "best_loss": best_loss,
+            "model_state_dict": model.state_dict(),
+        }
+
+        if optimizer is not None:
+            checkpoint["optimizer_state_dict"] = optimizer.state_dict()
+
+        if scheduler is not None:
+            checkpoint["scheduler_state_dict"] = scheduler.state_dict()
 
         torch.save(
-            model.state_dict(),
+            checkpoint,
             self.run_dir / "last_model.pth",
         )
+
+    # --------------------------------------------------
+    # Resume Training
+    # --------------------------------------------------
+
+    def load_checkpoint(
+        self,
+        checkpoint_path,
+        model,
+        optimizer=None,
+        scheduler=None,
+        map_location="cpu",
+    ):
+
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location=map_location,
+        )
+
+        model.load_state_dict(
+            checkpoint["model_state_dict"]
+        )
+
+        if (
+            optimizer is not None
+            and "optimizer_state_dict" in checkpoint
+        ):
+            optimizer.load_state_dict(
+                checkpoint["optimizer_state_dict"]
+            )
+
+        if (
+            scheduler is not None
+            and "scheduler_state_dict" in checkpoint
+        ):
+            scheduler.load_state_dict(
+                checkpoint["scheduler_state_dict"]
+            )
+
+        epoch = checkpoint.get("epoch", 0)
+
+        best_loss = checkpoint.get(
+            "best_loss",
+            float("inf"),
+        )
+
+        return epoch, best_loss
+
+    # --------------------------------------------------
+    # Save Metrics
+    # --------------------------------------------------
 
     def save_metrics(self, metrics):
 
         with open(
             self.run_dir / "metrics.json",
             "w",
+            encoding="utf-8",
         ) as f:
 
-            json.dump(metrics, f, indent=4)
+            json.dump(
+                metrics,
+                f,
+                indent=4,
+            )
+
+    # --------------------------------------------------
+    # Save Config
+    # --------------------------------------------------
 
     def save_config(self, config):
 
         with open(
             self.run_dir / "config.yaml",
             "w",
+            encoding="utf-8",
         ) as f:
 
-            yaml.dump(config, f)
+            yaml.safe_dump(
+                config,
+                f,
+                sort_keys=False,
+            )
+
+    # --------------------------------------------------
+    # Copy Log
+    # --------------------------------------------------
 
     def copy_log(self, log_path):
 
@@ -71,4 +187,19 @@ class CheckpointManager:
             shutil.copy(
                 log_path,
                 self.run_dir / log_path.name,
+            )
+
+    # --------------------------------------------------
+    # Save Arbitrary File
+    # --------------------------------------------------
+
+    def save_file(self, file_path):
+
+        file_path = Path(file_path)
+
+        if file_path.exists():
+
+            shutil.copy(
+                file_path,
+                self.run_dir / file_path.name,
             )

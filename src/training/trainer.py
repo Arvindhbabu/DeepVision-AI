@@ -4,9 +4,8 @@ DeepVision AI
 Generic Trainer
 """
 
-from pathlib import Path
-
 import torch
+from tqdm import tqdm
 
 
 class Trainer:
@@ -55,13 +54,25 @@ class Trainer:
 
         total = 0
 
-        for batch in self.train_loader:
+        progress = tqdm(
+            self.train_loader,
+            desc="Training",
+            leave=False,
+        )
 
-            images = batch["sequence"].to(self.device)
+        for batch in progress:
 
-            labels = batch["label"].to(self.device)
+            images = batch["sequence"].to(
+                self.device,
+                non_blocking=True,
+            )
 
-            self.optimizer.zero_grad()
+            labels = batch["label"].to(
+                self.device,
+                non_blocking=True,
+            )
+
+            self.optimizer.zero_grad(set_to_none=True)
 
             outputs = self.model(images)
 
@@ -79,9 +90,13 @@ class Trainer:
 
             correct += predicted.eq(labels).sum().item()
 
+            progress.set_postfix(
+                loss=f"{loss.item():.4f}"
+            )
+
         epoch_loss = running_loss / len(self.train_loader)
 
-        epoch_acc = 100 * correct / total
+        epoch_acc = 100.0 * correct / total
 
         return epoch_loss, epoch_acc
 
@@ -97,11 +112,23 @@ class Trainer:
 
         with torch.no_grad():
 
-            for batch in self.val_loader:
+            progress = tqdm(
+                self.val_loader,
+                desc="Validation",
+                leave=False,
+            )
 
-                images = batch["sequence"].to(self.device)
+            for batch in progress:
 
-                labels = batch["label"].to(self.device)
+                images = batch["sequence"].to(
+                    self.device,
+                    non_blocking=True,
+                )
+
+                labels = batch["label"].to(
+                    self.device,
+                    non_blocking=True,
+                )
 
                 outputs = self.model(images)
 
@@ -115,9 +142,13 @@ class Trainer:
 
                 correct += predicted.eq(labels).sum().item()
 
+                progress.set_postfix(
+                    loss=f"{loss.item():.4f}"
+                )
+
         epoch_loss = running_loss / len(self.val_loader)
 
-        epoch_acc = 100 * correct / total
+        epoch_acc = 100.0 * correct / total
 
         return epoch_loss, epoch_acc
 
@@ -131,16 +162,25 @@ class Trainer:
 
         for epoch in range(epochs):
 
+            self.logger.info(
+                f"Epoch {epoch + 1}/{epochs}"
+            )
+
             train_loss, train_acc = self.train_one_epoch()
 
             val_loss, val_acc = self.validate()
 
-            if self.scheduler:
+            if self.scheduler is not None:
 
-                self.scheduler.step()
+                if self.scheduler.__class__.__name__ == "ReduceLROnPlateau":
+
+                    self.scheduler.step(val_loss)
+
+                else:
+
+                    self.scheduler.step()
 
             self.logger.info(
-                f"Epoch {epoch+1}/{epochs} | "
                 f"Train Loss={train_loss:.4f} | "
                 f"Train Acc={train_acc:.2f}% | "
                 f"Val Loss={val_loss:.4f} | "
@@ -161,13 +201,31 @@ class Trainer:
 
                 best_loss = val_loss
 
-                self.checkpoint.save_best_model(self.model)
+                self.logger.info(
+                    f"New Best Model | Val Loss = {val_loss:.4f}"
+                )
 
-            self.checkpoint.save_last_model(self.model)
+                self.checkpoint.save_best_model(
+                    model=self.model,
+                    optimizer=self.optimizer,
+                    scheduler=self.scheduler,
+                    epoch=epoch + 1,
+                    best_loss=best_loss,
+                )
+
+            self.checkpoint.save_last_model(
+                model=self.model,
+                optimizer=self.optimizer,
+                scheduler=self.scheduler,
+                epoch=epoch + 1,
+                best_loss=best_loss,
+            )
 
             if self.early_stopping(val_loss):
 
-                self.logger.info("Early stopping triggered.")
+                self.logger.info(
+                    "Early stopping triggered."
+                )
 
                 break
 
