@@ -1,4 +1,22 @@
-#python -m src.preprocessing.extract_frames --datasets ffpp
-#python -m src.preprocessing.extract_frames --datasets celebdf
-#python -m src.preprocessing.face_align_mtcnn
-#python -m src.training.train_frame 
+name: deepvision-ai
+
+channels:
+  - pytorch
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - pip
+
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - scikit-image
+  - pyyaml
+  - tqdm
+
+  - pip:
+      - opencv-python
+      - facenet-pytorch
+      - timm

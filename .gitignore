@@ -28,3 +28,30 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Outputs
+outputs/
+
+# Models
+*.pth
+*.pt
+*.ckpt
+
+# Logs
+*.log
+
+# Cache
+__pycache__/
+*.pyc
+
+# VSCode
+.vscode/
+
+# Conda
+.env
+.venv
+
+# Dataset
+data/raw/
+data/intermediate/
+data/processed/
