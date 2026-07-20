@@ -7,8 +7,10 @@ Generic Trainer
 import torch
 from tqdm import tqdm
 
+from src.training.base_trainer import BaseTrainer
 
-class Trainer:
+
+class Trainer(BaseTrainer):
 
     def __init__(
         self,
@@ -24,25 +26,18 @@ class Trainer:
         scheduler=None,
     ):
 
-        self.model = model.to(device)
-
-        self.optimizer = optimizer
-
-        self.criterion = criterion
-
-        self.train_loader = train_loader
-
-        self.val_loader = val_loader
-
-        self.device = device
-
-        self.logger = logger
-
-        self.checkpoint = checkpoint_manager
-
-        self.early_stopping = early_stopping
-
-        self.scheduler = scheduler
+        super().__init__(
+            model=model,
+            optimizer=optimizer,
+            criterion=criterion,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            device=device,
+            logger=logger,
+            scheduler=scheduler,
+            checkpoint_manager=checkpoint_manager,
+            early_stopping=early_stopping,
+        )
 
     def train_one_epoch(self):
 
@@ -50,9 +45,7 @@ class Trainer:
 
         running_loss = 0.0
 
-        correct = 0
-
-        total = 0
+        self.metrics.reset()
 
         progress = tqdm(
             self.train_loader,
@@ -84,11 +77,10 @@ class Trainer:
 
             running_loss += loss.item()
 
-            _, predicted = outputs.max(1)
-
-            total += labels.size(0)
-
-            correct += predicted.eq(labels).sum().item()
+            self.metrics.update(
+                outputs,
+                labels,
+            )
 
             progress.set_postfix(
                 loss=f"{loss.item():.4f}"
@@ -96,7 +88,9 @@ class Trainer:
 
         epoch_loss = running_loss / len(self.train_loader)
 
-        epoch_acc = 100.0 * correct / total
+        results = self.metrics.compute()
+
+        epoch_acc = results["accuracy"] * 100
 
         return epoch_loss, epoch_acc
 
@@ -106,9 +100,7 @@ class Trainer:
 
         running_loss = 0.0
 
-        correct = 0
-
-        total = 0
+        self.metrics.reset()
 
         with torch.no_grad():
 
@@ -136,11 +128,10 @@ class Trainer:
 
                 running_loss += loss.item()
 
-                _, predicted = outputs.max(1)
-
-                total += labels.size(0)
-
-                correct += predicted.eq(labels).sum().item()
+                self.metrics.update(
+                    outputs,
+                    labels,
+                )
 
                 progress.set_postfix(
                     loss=f"{loss.item():.4f}"
@@ -148,19 +139,19 @@ class Trainer:
 
         epoch_loss = running_loss / len(self.val_loader)
 
-        epoch_acc = 100.0 * correct / total
+        results = self.metrics.compute()
+
+        epoch_acc = results["accuracy"] * 100
 
         return epoch_loss, epoch_acc
 
     def train(self, epochs):
 
-        best_loss = float("inf")
-
-        history = []
+        self.state.best_val_loss = float("inf")
 
         self.logger.info("Training Started")
 
-        for epoch in range(epochs):
+        for epoch in range(self.state.epoch, epochs):
 
             self.logger.info(
                 f"Epoch {epoch + 1}/{epochs}"
@@ -187,39 +178,39 @@ class Trainer:
                 f"Val Acc={val_acc:.2f}%"
             )
 
-            history.append(
-                {
-                    "epoch": epoch + 1,
-                    "train_loss": train_loss,
-                    "train_acc": train_acc,
-                    "val_loss": val_loss,
-                    "val_acc": val_acc,
-                }
+            self.history.add(
+                epoch=epoch + 1,
+                train_loss=train_loss,
+                train_acc=train_acc,
+                val_loss=val_loss,
+                val_acc=val_acc,
             )
 
-            if val_loss < best_loss:
+            if val_loss < self.state.best_val_loss:
 
-                best_loss = val_loss
+                self.state.best_val_loss = val_loss
 
                 self.logger.info(
                     f"New Best Model | Val Loss = {val_loss:.4f}"
                 )
 
-                self.checkpoint.save_best_model(
+                self.checkpoint_manager.save_best_model(
                     model=self.model,
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
                     epoch=epoch + 1,
-                    best_loss=best_loss,
+                    best_loss=self.state.best_val_loss,
                 )
 
-            self.checkpoint.save_last_model(
+            self.checkpoint_manager.save_last_model(
                 model=self.model,
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
                 epoch=epoch + 1,
-                best_loss=best_loss,
+                best_loss=self.state.best_val_loss,
             )
+
+            self.state.epoch = epoch + 1
 
             if self.early_stopping(val_loss):
 
@@ -229,6 +220,8 @@ class Trainer:
 
                 break
 
-        self.checkpoint.save_metrics(history)
+        self.checkpoint_manager.save_metrics(
+            self.history.get()
+        )
 
-        return history
+        return self.history.get()
