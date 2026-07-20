@@ -5,7 +5,7 @@ Base Trainer
 
 Defines the common functionality shared by all trainers.
 """
-
+from src.training.state import TrainingState
 from abc import ABC, abstractmethod
 import time
 
@@ -51,8 +51,7 @@ class BaseTrainer(ABC):
         self.early_stopping = early_stopping
 
         # Training state
-        self.current_epoch = 0
-        self.best_val_loss = float("inf")
+        self.state = TrainingState()
 
         # Utilities
         self.history = History()

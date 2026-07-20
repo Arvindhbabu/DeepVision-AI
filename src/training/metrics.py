@@ -78,6 +78,14 @@ class Metrics:
 
     def compute(self) -> Dict[str, float]:
 
+        if len(self.targets) == 0:
+            return {
+                "accuracy": 0.0,
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1": 0.0,
+            }
+
         y_true = np.array(self.targets)
 
         y_pred = np.array(self.predictions)

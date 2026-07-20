@@ -44,8 +44,8 @@ class Trainer(BaseTrainer):
         self.model.train()
 
         running_loss = 0.0
-        correct = 0
-        total = 0
+
+        self.metrics.reset()
 
         progress = tqdm(
             self.train_loader,
@@ -77,18 +77,20 @@ class Trainer(BaseTrainer):
 
             running_loss += loss.item()
 
-            _, predicted = outputs.max(1)
-
-            total += labels.size(0)
-
-            correct += predicted.eq(labels).sum().item()
+            self.metrics.update(
+                outputs,
+                labels,
+            )
 
             progress.set_postfix(
                 loss=f"{loss.item():.4f}"
             )
 
         epoch_loss = running_loss / len(self.train_loader)
-        epoch_acc = 100.0 * correct / total
+
+        results = self.metrics.compute()
+
+        epoch_acc = results["accuracy"] * 100
 
         return epoch_loss, epoch_acc
 
@@ -97,8 +99,8 @@ class Trainer(BaseTrainer):
         self.model.eval()
 
         running_loss = 0.0
-        correct = 0
-        total = 0
+
+        self.metrics.reset()
 
         with torch.no_grad():
 
@@ -126,18 +128,20 @@ class Trainer(BaseTrainer):
 
                 running_loss += loss.item()
 
-                _, predicted = outputs.max(1)
-
-                total += labels.size(0)
-
-                correct += predicted.eq(labels).sum().item()
+                self.metrics.update(
+                    outputs,
+                    labels,
+                )
 
                 progress.set_postfix(
                     loss=f"{loss.item():.4f}"
                 )
 
         epoch_loss = running_loss / len(self.val_loader)
-        epoch_acc = 100.0 * correct / total
+
+        results = self.metrics.compute()
+
+        epoch_acc = results["accuracy"] * 100
 
         return epoch_loss, epoch_acc
 
