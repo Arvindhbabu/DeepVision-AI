@@ -4,12 +4,11 @@ DeepVision AI
 Generic Trainer
 """
 
-from xml.parsers.expat import model
-
 import torch
 from tqdm import tqdm
 
 from src.training.base_trainer import BaseTrainer
+
 
 class Trainer(BaseTrainer):
 
@@ -45,9 +44,7 @@ class Trainer(BaseTrainer):
         self.model.train()
 
         running_loss = 0.0
-
         correct = 0
-
         total = 0
 
         progress = tqdm(
@@ -91,7 +88,6 @@ class Trainer(BaseTrainer):
             )
 
         epoch_loss = running_loss / len(self.train_loader)
-
         epoch_acc = 100.0 * correct / total
 
         return epoch_loss, epoch_acc
@@ -101,9 +97,7 @@ class Trainer(BaseTrainer):
         self.model.eval()
 
         running_loss = 0.0
-
         correct = 0
-
         total = 0
 
         with torch.no_grad():
@@ -143,20 +137,17 @@ class Trainer(BaseTrainer):
                 )
 
         epoch_loss = running_loss / len(self.val_loader)
-
         epoch_acc = 100.0 * correct / total
 
         return epoch_loss, epoch_acc
 
     def train(self, epochs):
 
-        best_loss = float("inf")
-
-        history = []
+        self.state.best_val_loss = float("inf")
 
         self.logger.info("Training Started")
 
-        for epoch in range(epochs):
+        for epoch in range(self.state.epoch, epochs):
 
             self.logger.info(
                 f"Epoch {epoch + 1}/{epochs}"
@@ -183,19 +174,17 @@ class Trainer(BaseTrainer):
                 f"Val Acc={val_acc:.2f}%"
             )
 
-            history.append(
-                {
-                    "epoch": epoch + 1,
-                    "train_loss": train_loss,
-                    "train_acc": train_acc,
-                    "val_loss": val_loss,
-                    "val_acc": val_acc,
-                }
+            self.history.add(
+                epoch=epoch + 1,
+                train_loss=train_loss,
+                train_acc=train_acc,
+                val_loss=val_loss,
+                val_acc=val_acc,
             )
 
-            if val_loss < best_loss:
+            if val_loss < self.state.best_val_loss:
 
-                best_loss = val_loss
+                self.state.best_val_loss = val_loss
 
                 self.logger.info(
                     f"New Best Model | Val Loss = {val_loss:.4f}"
@@ -206,7 +195,7 @@ class Trainer(BaseTrainer):
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
                     epoch=epoch + 1,
-                    best_loss=best_loss,
+                    best_loss=self.state.best_val_loss,
                 )
 
             self.checkpoint_manager.save_last_model(
@@ -214,8 +203,10 @@ class Trainer(BaseTrainer):
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
                 epoch=epoch + 1,
-                best_loss=best_loss,
+                best_loss=self.state.best_val_loss,
             )
+
+            self.state.epoch = epoch + 1
 
             if self.early_stopping(val_loss):
 
@@ -225,6 +216,8 @@ class Trainer(BaseTrainer):
 
                 break
 
-        self.checkpoint_manager.save_metrics(history)
+        self.checkpoint_manager.save_metrics(
+            self.history.get()
+        )
 
-        return history
+        return self.history.get()
