@@ -4,11 +4,14 @@ DeepVision AI
 Generic Trainer
 """
 
+from xml.parsers.expat import model
+
 import torch
 from tqdm import tqdm
 
+from src.training.base_trainer import BaseTrainer
 
-class Trainer:
+class Trainer(BaseTrainer):
 
     def __init__(
         self,
@@ -24,25 +27,18 @@ class Trainer:
         scheduler=None,
     ):
 
-        self.model = model.to(device)
-
-        self.optimizer = optimizer
-
-        self.criterion = criterion
-
-        self.train_loader = train_loader
-
-        self.val_loader = val_loader
-
-        self.device = device
-
-        self.logger = logger
-
-        self.checkpoint = checkpoint_manager
-
-        self.early_stopping = early_stopping
-
-        self.scheduler = scheduler
+        super().__init__(
+            model=model,
+            optimizer=optimizer,
+            criterion=criterion,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            device=device,
+            logger=logger,
+            scheduler=scheduler,
+            checkpoint_manager=checkpoint_manager,
+            early_stopping=early_stopping,
+        )
 
     def train_one_epoch(self):
 
@@ -205,7 +201,7 @@ class Trainer:
                     f"New Best Model | Val Loss = {val_loss:.4f}"
                 )
 
-                self.checkpoint.save_best_model(
+                self.checkpoint_manager.save_best_model(
                     model=self.model,
                     optimizer=self.optimizer,
                     scheduler=self.scheduler,
@@ -213,7 +209,7 @@ class Trainer:
                     best_loss=best_loss,
                 )
 
-            self.checkpoint.save_last_model(
+            self.checkpoint_manager.save_last_model(
                 model=self.model,
                 optimizer=self.optimizer,
                 scheduler=self.scheduler,
@@ -229,6 +225,6 @@ class Trainer:
 
                 break
 
-        self.checkpoint.save_metrics(history)
+        self.checkpoint_manager.save_metrics(history)
 
         return history
