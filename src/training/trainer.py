@@ -4,6 +4,7 @@ DeepVision AI
 Generic Trainer
 """
 
+# pyrefly: ignore [missing-import]
 import torch
 from tqdm import tqdm
 
