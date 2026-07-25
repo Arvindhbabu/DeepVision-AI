@@ -4,7 +4,7 @@
 ### AI-Powered Deepfake Detection using Vision Transformers and Temporal Learning
 
 <p align="center">
-  <img src="assets/logo.png" alt="DeepVision AI" width="180"/>
+  <img src="https://i.ibb.co/7dtWBspY/logo.png">
 </p>
 
 <p align="center">
