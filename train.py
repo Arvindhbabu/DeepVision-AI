@@ -11,7 +11,9 @@ Author : Arvindh Babu
 import argparse
 from pathlib import Path
 
+# pyrefly: ignore [missing-import]
 import torch
+# pyrefly: ignore [missing-import]
 import torch.nn as nn
 
 from src.utils.config import load_config
@@ -140,7 +142,7 @@ def main():
         f"Test batches : {len(test_loader)}"
     )
 
-        # --------------------------------------------------------
+    # --------------------------------------------------------
     # Model
     # --------------------------------------------------------
 
@@ -214,6 +216,12 @@ def main():
     # Checkpoint Manager
     # --------------------------------------------------------
 
+    config["runtime"] = {
+        "device": str(device),
+        "total_parameters": total_params,
+        "trainable_parameters": trainable_params,
+    }
+
     checkpoint_manager = CheckpointManager()
 
     checkpoint_manager.save_config(config)
@@ -248,6 +256,10 @@ def main():
             map_location=device,
         )
 
+        trainer_state = None  # placeholder until trainer is created
+
+        
+
         logger.info(
             f"Checkpoint Loaded (Epoch {epoch})"
         )
@@ -279,22 +291,65 @@ def main():
         scheduler=scheduler,
     )
 
-        # --------------------------------------------------------
+    if args.resume is not None:
+        trainer.state.epoch = epoch
+        trainer.state.best_val_loss = best_loss
+
+    # --------------------------------------------------------
     # Start Training
     # --------------------------------------------------------
 
     logger.info("=" * 60)
-    logger.info("Starting Training")
+    logger.info("DeepVision AI")
+    logger.info("=" * 60)
+    logger.info(f"Model      : {model.__class__.__name__}")
+    logger.info(f"Device     : {device}")
+    logger.info(f"Epochs     : {config['training']['epochs']}")
+    logger.info(f"Batch Size : {config['dataloader']['batch_size']}")
+    logger.info(
+        f"Learning Rate : {config['training']['learning_rate']}"
+    )
+    logger.info(
+        f"Dataset : {config['dataset']['name']}"
+    )
     logger.info("=" * 60)
 
-    history = trainer.train(
-        epochs=config["training"]["epochs"]
-    )
+    history = []
+
+    try:
+
+        history = trainer.train(
+            epochs=config["training"]["epochs"]
+        )
+
+    except KeyboardInterrupt:
+
+        logger.warning(
+            "Training interrupted by user."
+        )
+
+    except Exception:
+
+        logger.exception(
+            "Training failed."
+        )
+
+        raise
+
+    finally:
+        try:
+            checkpoint_manager.copy_log(
+                "outputs/logs/train.log"
+            )
+        except Exception as e:
+            logger.warning(
+                f"Unable to copy log: {e}"
+            )
 
     # --------------------------------------------------------
     # Save Training Log
     # --------------------------------------------------------
-
+    
     try:
 
         checkpoint_manager.copy_log(
@@ -360,6 +415,18 @@ def main():
 
     logger.info(
         f"  • Training Log    : {checkpoint_manager.path / 'train.log'}"
+    )
+
+    logger.info(
+        f"Training Samples : {len(train_loader.dataset)}"
+    )
+
+    logger.info(
+        f"Validation Samples : {len(val_loader.dataset)}"
+    )
+
+    logger.info(
+        f"Test Samples : {len(test_loader.dataset)}"
     )
 
     logger.info("=" * 60)

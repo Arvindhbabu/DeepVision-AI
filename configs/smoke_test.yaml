@@ -6,7 +6,6 @@ paths:
   raw_data: data/raw
   processed_data: data/processed
   sequences: data/intermediate/sequences
-
   outputs: outputs
   checkpoints: outputs/checkpoints
   logs: outputs/logs
@@ -15,47 +14,31 @@ paths:
 
 dataset:
   name: FFPP_CelebDF
-
   image_size: 224
-
-  sequence_length: 26
-
+  sequence_length: 30
   fps: 5
 
 dataloader:
-  batch_size: 2
-
+  batch_size: 4
   num_workers: 0
-
   pin_memory: true
-
   drop_last: false
 
 training:
-  epochs: 50
-
-  learning_rate: 0.00001
-
+  epochs: 1
+  learning_rate: 0.0001
   weight_decay: 0.0001
-
   optimizer: AdamW
-
   scheduler: CosineAnnealingLR
 
 model:
   name: vit_temporal_pooling
-
   pretrained: true
-
-  freeze_backbone: false
-
+  freeze_backbone: true
   num_classes: 2
-
   pooling: mean
-
   hidden_dim: 256
-
-  dropout: 0.3
+  dropout: 0.5
 
 evaluation:
   metrics:
@@ -63,4 +46,3 @@ evaluation:
     - precision
     - recall
     - f1
-    - auc
